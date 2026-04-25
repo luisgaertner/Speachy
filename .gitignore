@@ -1,0 +1,54 @@
+# Xcode build artifacts
+build/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcworkspace
+*.xcodeproj
+
+# Xcode derived data
+DerivedData/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode user settings
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/
+
+# Pods (CocoaPods)
+Pods/
+Podfile.lock
+
+# Carthage
+Carthage/
+*.carthage
+
+# Swift Package Manager
+.swiftpm/
+.build/
+*.resolved
+
+# Environment variables and secrets
+.env
+.env.local
+*.key
+*.pem
+*.p8
+*.p12
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.log

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Basis-App-Info -->
+    <key>CFBundleDevelopmentRegion</key>
+    <string>de</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>VoiceScribe</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+
+    <!-- Keine Dock-Icon (nur in Menüleiste) -->
+    <key>LSUIElement</key>
+    <true/>
+
+    <!-- Mindest-macOS Version -->
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+
+    <!-- Berechtigungen -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>VoiceScribe benötigt Zugriff auf das Mikrofon, um Audio aufzunehmen und in Text umzuwandeln.</string>
+
+    <key>NSAppleEventsUsageDescription</key>
+    <string>VoiceScribe benötigt Apple Events für die Steuerung anderer Anwendungen und zum Einfügen von Text an der Cursor-Position.</string>
+
+    <key>NSAccessibilityUsageDescription</key>
+    <string>VoiceScribe benötigt Accessibility-Berechtigungen für Hotkey-Registrierung und zum Einfügen von transkribiertem Text in fokussierte Anwendungen.</string>
+
+    <!-- Theme -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+        <key>NSExceptionDomains</key>
+        <dict>
+            <key>platform.wisprflow.ai</key>
+            <dict>
+                <key>NSIncludesSubdomains</key>
+                <true/>
+                <key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key>
+                <false/>
+                <key>NSTemporaryExceptionMinimumTLSVersion</key>
+                <string>TLSv1.2</string>
+            </dict>
+        </dict>
+    </key>
+
+    <!-- Unterstützte Sprachen -->
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>de</string>
+        <string>en</string>
+    </array>
+
+    <!-- Appearance -->
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
+    <true/>
+    <key>NSRequiresIPhoneOS</key>
+    <false/>
+</dict>
+</plist>
