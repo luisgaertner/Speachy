@@ -75,6 +75,10 @@ final class AppState {
     @ObservationIgnored
     private let rewriteService = RewriteService()
 
+    // History
+    @ObservationIgnored
+    let history = TranscriptHistory.shared
+
     // MARK: - Init
 
     init() {
@@ -152,9 +156,10 @@ final class AppState {
                 finalText = await rewriteService.rewriteFormal(text: finalText)
             }
 
-            // Text an Cursor-Position einfügen
+            // Text an Cursor-Position einfügen + in History speichern
             await MainActor.run {
                 textInserter.insertText(finalText)
+                history.add(text: finalText, mode: currentMode)
                 statusText = "Bereit"
             }
 

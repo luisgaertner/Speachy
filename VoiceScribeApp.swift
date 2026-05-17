@@ -6,6 +6,7 @@ struct VoiceScribeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     private let appState = AppState.shared
+    private let history = TranscriptHistory.shared
 
     var body: some Scene {
         MenuBarExtra("VoiceScribe", systemImage: appState.isRecording ? "mic.fill" : "mic") {
@@ -24,6 +25,44 @@ struct VoiceScribeApp: App {
                    ? "Aufnahme stoppen"
                    : "Formale Diktation (Ctrl+Shift+F)") {
                 toggleRecording(mode: .formal)
+            }
+
+            Divider()
+
+            // MARK: - Verlauf
+
+            if history.entries.isEmpty {
+                Text("Kein Verlauf")
+                    .foregroundStyle(.secondary)
+            } else {
+                Menu("Verlauf (\(history.entries.count))") {
+                    ForEach(history.entries.prefix(15)) { entry in
+                        Button {
+                            history.copyToClipboard(entry)
+                            appState.statusText = "Kopiert!"
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                if appState.statusText == "Kopiert!" {
+                                    appState.statusText = "Bereit"
+                                }
+                            }
+                        } label: {
+                            let icon = entry.mode == "formal" ? "📝" : "🎤"
+                            Text("\(icon) \(entry.preview)  —  \(entry.formattedDate)")
+                        }
+                    }
+
+                    if history.entries.count > 15 {
+                        Divider()
+                        Text("... und \(history.entries.count - 15) weitere")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Divider()
+
+                    Button("Verlauf löschen", role: .destructive) {
+                        history.clearAll()
+                    }
+                }
             }
 
             Divider()
