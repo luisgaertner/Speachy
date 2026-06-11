@@ -2,12 +2,10 @@ import Foundation
 
 // MARK: - OpenAI Whisper API Response Models
 
-/// Standard-Antwort der OpenAI Transcription API (response_format: "json")
 struct WhisperResponse: Codable {
     let text: String
 }
 
-/// Erweiterte Antwort mit Details (response_format: "verbose_json")
 struct WhisperVerboseResponse: Codable {
     let task: String?
     let language: String?
@@ -15,7 +13,6 @@ struct WhisperVerboseResponse: Codable {
     let text: String
 }
 
-/// Internes Ergebnis für die App
 struct TranscriptionResult {
     let text: String
     let detectedLanguage: String?
@@ -56,60 +53,65 @@ class WhisperService {
 
     // MARK: - Transkription
 
-    /// Transkribiert eine Audio-Datei über die OpenAI Whisper API
-    /// - Parameters:
-    ///   - audioFileURL: Pfad zur WAV-Datei
-    ///   - language: Optionaler ISO-639-1 Sprachcode (z.B. "de", "en"). Nil = automatische Erkennung
-    /// - Returns: TranscriptionResult mit dem transkribierten Text
     func transcribe(audioFileURL: URL, language: String? = nil) async throws -> TranscriptionResult {
         guard !apiKey.isEmpty else {
             throw WhisperError.missingApiKey
         }
 
-        // Lese Audio-Datei
         let audioData = try Data(contentsOf: audioFileURL)
 
-        // Erstelle Multipart-Request
+        #if DEBUG
+        print("Audio-Datei: \(audioFileURL.lastPathComponent), Größe: \(audioData.count) bytes")
+        #endif
+
         let boundary = "Boundary-\(UUID().uuidString)"
 
         var request = URLRequest(url: URL(string: Self.defaultEndpoint)!)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 60 // 60 Sekunden Timeout
+        request.timeoutInterval = 60
 
-        // Baue Multipart-Body
         var body = Data()
 
-        // Feld: file (die Audio-Datei)
+        // MIME-Type basierend auf Dateiendung
+        let ext = audioFileURL.pathExtension.lowercased()
+        let mimeType: String
+        switch ext {
+        case "wav": mimeType = "audio/wav"
+        case "m4a": mimeType = "audio/m4a"
+        case "mp3": mimeType = "audio/mpeg"
+        case "webm": mimeType = "audio/webm"
+        default: mimeType = "audio/wav"
+        }
+
+        // Feld: file
         body.appendMultipart(boundary: boundary, name: "file",
                              filename: audioFileURL.lastPathComponent,
-                             mimeType: "audio/m4a",
+                             mimeType: mimeType,
                              data: audioData)
 
         // Feld: model
         body.appendMultipart(boundary: boundary, name: "model",
                              value: model.rawValue)
 
-        // Feld: language (optional — verbessert Genauigkeit wenn angegeben)
+        // Feld: language
         if let language = language {
             body.appendMultipart(boundary: boundary, name: "language",
                                  value: language)
         }
 
-        // Feld: response_format — verbose_json für Spracherkennung
+
+        // Feld: response_format
         body.appendMultipart(boundary: boundary, name: "response_format",
                              value: "json")
 
-        // Abschluss-Boundary
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 
         request.httpBody = body
 
-        // Sende Request
         let (data, response) = try await session.data(for: request)
 
-        // Prüfe HTTP-Status
         guard let httpResponse = response as? HTTPURLResponse else {
             throw WhisperError.invalidResponse
         }
@@ -119,9 +121,12 @@ class WhisperService {
             throw WhisperError.httpError(statusCode: httpResponse.statusCode, message: errorBody)
         }
 
-        // Dekodiere Antwort
         let decoder = JSONDecoder()
         let verboseResponse = try decoder.decode(WhisperVerboseResponse.self, from: data)
+
+        #if DEBUG
+        print("Transkription: '\(verboseResponse.text)'")
+        #endif
 
         return TranscriptionResult(
             text: verboseResponse.text,
@@ -132,11 +137,9 @@ class WhisperService {
 
     // MARK: - Verbindungstest
 
-    /// Testet die API-Verbindung mit einer kurzen stillen WAV-Datei
     func testConnection() async -> Bool {
         guard !apiKey.isEmpty else { return false }
 
-        // Erstelle minimale Test-WAV (0.5 Sekunden Stille)
         let testURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("whisper_test_\(UUID().uuidString).wav")
 
@@ -157,7 +160,6 @@ class WhisperService {
 
     // MARK: - Hilfs-Funktionen
 
-    /// Erstellt eine stille WAV-Datei für den Verbindungstest
     private func createSilentWAV(durationSeconds: Double) -> Data {
         let sampleRate: Int = 16000
         let numSamples = Int(Double(sampleRate) * durationSeconds)
@@ -170,22 +172,17 @@ class WhisperService {
         let byteRate = UInt32(sampleRate) * UInt32(channels) * UInt32(bitDepth / 8)
         let blockAlign = channels * (bitDepth / 8)
 
-        // RIFF Header
         wav.append(Data("RIFF".utf8))
         wav.append(withUnsafeBytes(of: UInt32(pcmData.count + 36).littleEndian) { Data($0) })
         wav.append(Data("WAVE".utf8))
-
-        // fmt Chunk
         wav.append(Data("fmt ".utf8))
         wav.append(withUnsafeBytes(of: UInt32(16).littleEndian) { Data($0) })
-        wav.append(withUnsafeBytes(of: UInt16(1).littleEndian) { Data($0) }) // PCM
+        wav.append(withUnsafeBytes(of: UInt16(1).littleEndian) { Data($0) })
         wav.append(withUnsafeBytes(of: channels.littleEndian) { Data($0) })
         wav.append(withUnsafeBytes(of: UInt32(sampleRate).littleEndian) { Data($0) })
         wav.append(withUnsafeBytes(of: byteRate.littleEndian) { Data($0) })
         wav.append(withUnsafeBytes(of: blockAlign.littleEndian) { Data($0) })
         wav.append(withUnsafeBytes(of: bitDepth.littleEndian) { Data($0) })
-
-        // data Chunk
         wav.append(Data("data".utf8))
         wav.append(withUnsafeBytes(of: UInt32(pcmData.count).littleEndian) { Data($0) })
         wav.append(pcmData)
@@ -209,14 +206,10 @@ enum WhisperError: LocalizedError {
             return "Ungültige Antwort vom Server."
         case .httpError(let statusCode, let message):
             switch statusCode {
-            case 401:
-                return "Ungültiger API-Schlüssel. Bitte prüfen Sie Ihren OpenAI API-Key."
-            case 429:
-                return "Rate-Limit erreicht. Bitte kurz warten."
-            case 413:
-                return "Audio-Datei zu groß. Maximum: 25 MB."
-            default:
-                return "HTTP-Fehler \(statusCode): \(message)"
+            case 401: return "Ungültiger API-Schlüssel."
+            case 429: return "Rate-Limit erreicht. Bitte kurz warten."
+            case 413: return "Audio-Datei zu groß. Maximum: 25 MB."
+            default: return "HTTP-Fehler \(statusCode): \(message)"
             }
         }
     }
@@ -225,14 +218,12 @@ enum WhisperError: LocalizedError {
 // MARK: - Data Extension für Multipart
 
 extension Data {
-    /// Fügt ein Text-Feld zum Multipart-Body hinzu
     mutating func appendMultipart(boundary: String, name: String, value: String) {
         append("--\(boundary)\r\n".data(using: .utf8)!)
         append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!)
         append("\(value)\r\n".data(using: .utf8)!)
     }
 
-    /// Fügt eine Datei zum Multipart-Body hinzu
     mutating func appendMultipart(boundary: String, name: String, filename: String, mimeType: String, data: Data) {
         append("--\(boundary)\r\n".data(using: .utf8)!)
         append("Content-Disposition: form-data; name=\"\(name)\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
